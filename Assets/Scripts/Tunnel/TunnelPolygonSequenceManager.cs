@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.InputSystem;
@@ -10,6 +11,8 @@ namespace GMTKCountdown.Tunnel
 {
     public class TunnelPolygonSequenceManager : MonoBehaviour
     {
+        public event Action<int> LevelChanged;
+
         [Header("Player")]
         [SerializeField] private Transform player;
 
@@ -29,6 +32,8 @@ namespace GMTKCountdown.Tunnel
         [SerializeField] private AudioClip orbPickupClip;
         [SerializeField] private float levelChangeVolume = 1f;
         [SerializeField] private float orbPickupVolume = 1f;
+
+        public int CurrentLevelIndex => currentLevelIndex;
 
         private int currentLevelIndex;
         private float swapTimer;
@@ -91,6 +96,8 @@ namespace GMTKCountdown.Tunnel
                 bool shouldBeActive = activateFirstLevelOnStart && i == 0;
                 level.SetActive(shouldBeActive);
             }
+
+            NotifyLevelChanged();
         }
 
         private void AdvanceToNextLevel()
@@ -108,6 +115,7 @@ namespace GMTKCountdown.Tunnel
             SetLevelActive(currentLevelIndex, false);
             currentLevelIndex++;
             SetLevelActive(currentLevelIndex, true);
+            NotifyLevelChanged();
             PlayLevelChangeSound();
         }
 
@@ -184,6 +192,11 @@ namespace GMTKCountdown.Tunnel
                 return;
 
             audioSource.PlayOneShot(orbPickupClip, orbPickupVolume);
+        }
+
+        private void NotifyLevelChanged()
+        {
+            LevelChanged?.Invoke(currentLevelIndex);
         }
 
 #if UNITY_EDITOR

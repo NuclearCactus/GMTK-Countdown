@@ -49,9 +49,12 @@ namespace GMTKCountdown.Enemies
         private bool chasing;
         private EntityId threatId;
 
+        private Animator enemyAnimator;
+
         private void Awake()
         {
             rb = GetComponent<Rigidbody>();
+            enemyAnimator = GetComponent<Animator>();
 
             // This AI moves itself explicitly, it shouldn't be pushed around by
             // physics forces/gravity. Setting these here means the behaviour is
@@ -141,6 +144,7 @@ namespace GMTKCountdown.Enemies
 
             if (chasing)
             {
+                enemyAnimator.SetBool("isChasing", true);
                 // Facing always points straight at the player - only the actual
                 // travel target gets bent by the contact-distance/separation math
                 // below, so the enemy doesn't visually swivel away from the player
@@ -151,6 +155,7 @@ namespace GMTKCountdown.Enemies
             }
             else
             {
+                enemyAnimator.SetBool("isChasing", false);
                 repathTimer -= Time.fixedDeltaTime;
                 if (repathTimer <= 0f || Vector3.Distance(rb.position, wanderTarget) <= 0.25f)
                     PickNewWanderTarget();
