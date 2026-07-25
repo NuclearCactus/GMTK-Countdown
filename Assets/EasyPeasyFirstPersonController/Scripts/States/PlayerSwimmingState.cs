@@ -41,7 +41,7 @@ namespace EasyPeasyFirstPersonController
 
         private void HandleSwimMovement()
         {
-            float speed = ctx.input.sprint ? ctx.swimSprintSpeed : ctx.swimSpeed;
+            float speed = (ctx.input.sprint ? ctx.swimSprintSpeed : ctx.swimSpeed) * ctx.GetEnemySpeedMultiplier();
 
             Vector2 input = ctx.input.moveInput;
             Vector3 horizontalMove = ctx.transform.right * input.x + ctx.transform.forward * input.y;

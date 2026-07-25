@@ -3,9 +3,9 @@ using UnityEngine;
 namespace GMTKCountdown.Tunnel
 {
     [RequireComponent(typeof(Collider))]
-    public class TunnelResetOrb : MonoBehaviour
+    public class TunnelPolygonResetOrb : MonoBehaviour
     {
-        [SerializeField] private TunnelDegradationManager tunnelManager;
+        [SerializeField] private TunnelPolygonSequenceManager tunnelManager;
         [SerializeField] private bool destroyOnPickup = true;
 
         private void Reset()
@@ -18,7 +18,7 @@ namespace GMTKCountdown.Tunnel
         private void Awake()
         {
             if (tunnelManager == null)
-                tunnelManager = FindAnyObjectByType<TunnelDegradationManager>();
+                tunnelManager = FindAnyObjectByType<TunnelPolygonSequenceManager>();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -27,7 +27,10 @@ namespace GMTKCountdown.Tunnel
                 return;
 
             if (tunnelManager != null)
-                tunnelManager.NotifyOrbCollected();
+            {
+                tunnelManager.PlayOrbPickupSound();
+                tunnelManager.ResetToOriginalPolygonalLevel();
+            }
 
             if (destroyOnPickup)
                 Destroy(gameObject);

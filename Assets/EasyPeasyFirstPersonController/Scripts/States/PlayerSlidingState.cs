@@ -12,6 +12,7 @@ namespace EasyPeasyFirstPersonController
         public override void EnterState()
         {
             slideTimer = ctx.slideDuration;
+            ctx.PlaySlideSound();
 
             if (!ctx.enableSmoothCrouch)
             {
@@ -119,7 +120,7 @@ namespace EasyPeasyFirstPersonController
         private void HandleSlideMovement(float progress)
         {
             float speedCurve = Mathf.Pow(progress, 0.5f);
-            float speed = ctx.slideSpeed * Mathf.Lerp(0.5f, 1f, speedCurve);
+            float speed = ctx.slideSpeed * Mathf.Lerp(0.5f, 1f, speedCurve) * ctx.GetEnemySpeedMultiplier();
 
             // Allow the player to steer left/right while sliding
             float strafeInput = ctx.input.moveInput.x;

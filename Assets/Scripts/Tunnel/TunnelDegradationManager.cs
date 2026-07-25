@@ -101,7 +101,7 @@ namespace GMTKCountdown.Tunnel
                 return;
             }
 
-            var fps = FindFirstObjectByType<EasyPeasyFirstPersonController.FirstPersonController>();
+            var fps = FindAnyObjectByType<EasyPeasyFirstPersonController.FirstPersonController>();
             if (fps != null)
                 player = fps.transform;
         }

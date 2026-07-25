@@ -10,6 +10,7 @@ namespace EasyPeasyFirstPersonController
         public override void EnterState()
         {
             HandleJump();
+            ctx.PlayJumpSound();
         }
 
         public override void UpdateState()
@@ -57,7 +58,7 @@ namespace EasyPeasyFirstPersonController
             Vector3 targetMove = ctx.transform.right * input.x + ctx.transform.forward * input.y;
             targetMove = Vector3.ClampMagnitude(targetMove, 1f);
             
-            Vector3 targetVelocity = targetMove * ctx.walkSpeed;
+            Vector3 targetVelocity = targetMove * ctx.walkSpeed * ctx.GetEnemySpeedMultiplier();
             
             // Allow some air control (acceleration is much lower in the air than on the ground)
             float airAccel = 5f;
