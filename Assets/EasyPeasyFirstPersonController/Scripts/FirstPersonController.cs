@@ -28,6 +28,7 @@ namespace EasyPeasyFirstPersonController
         public bool enableSlopeSliding = true;
         public float slideUphillFriction = 3f;
         public float slideSteerControl = 4f;
+        [Range(0f, 1f)] public float slideSteeringSpeedScaling = 0.8f;
 
         [Header("References")]
         public Transform playerCamera;
@@ -37,24 +38,39 @@ namespace EasyPeasyFirstPersonController
 
         [Header("Audio")]
         public AudioSource footstepSource;
+        public AudioSource slideLoopSource;
         public AudioClip[] footstepClips;
         public AudioClip[] jumpClips;
         public AudioClip[] slideClips;
+        public AudioClip slideStartClip;
+        public AudioClip slideLoopClip;
+        public AudioClip slideEndClip;
         public float footstepStepDistance = 1.6f;
         public float footstepMinSpeed = 0.15f;
         public float footstepVolume = 1f;
         public float jumpVolume = 1f;
         public float slideVolume = 1f;
+        public float slideMinPitch = 0.95f;
+        public float slideMaxPitch = 1.35f;
+        public bool enableSlidePitchModulation = true;
 
         [Header("Sliding Tackle Settings")]
         public float tackleSpeedBoost = 3f;
         public float tackleDurationBonus = 0.5f;
         public float maxTackleBonusSpeed = 15f;
+        public float minTackleSpeed = 0f;
         public AudioClip[] tackleClips;
         public float tackleVolume = 1f;
         public GameObject tackleVfxPrefab;
         public float tackleCameraShakeIntensity = 0.3f;
         public float tackleCameraShakeDuration = 0.2f;
+
+        [Header("Timed Slide Jump Boost Settings")]
+        public bool enableSlideJumpBoost = true;
+        public Vector2 slideJumpBoostWindow = new Vector2(0.8f, 0.95f);
+        public float slideJumpBoostMultiplier = 1.35f;
+        public AudioClip slideJumpBoostClip;
+        public float slideJumpBoostVolume = 1f;
 
         [HideInInspector] public CharacterController characterController;
         [HideInInspector] public IInputManager input;
@@ -158,6 +174,13 @@ namespace EasyPeasyFirstPersonController
 
             if (footstepSource == null)
                 footstepSource = gameObject.AddComponent<AudioSource>();
+
+            if (slideLoopSource == null)
+            {
+                slideLoopSource = gameObject.AddComponent<AudioSource>();
+                slideLoopSource.playOnAwake = false;
+                slideLoopSource.loop = true;
+            }
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -327,6 +350,50 @@ namespace EasyPeasyFirstPersonController
             PlayRandomAudioClip(slideClips, slideVolume);
         }
 
+        public void StartSlideAudio()
+        {
+            if (slideStartClip != null)
+            {
+                footstepSource.PlayOneShot(slideStartClip, slideVolume);
+            }
+
+            if (slideLoopClip != null && slideLoopSource != null)
+            {
+                slideLoopSource.clip = slideLoopClip;
+                slideLoopSource.loop = true;
+                slideLoopSource.volume = slideVolume;
+                slideLoopSource.pitch = slideMinPitch;
+                slideLoopSource.Play();
+            }
+            else
+            {
+                PlaySlideSound();
+            }
+        }
+
+        public void UpdateSlideAudio(float currentSpeed, float baseSpeed, float maxSpeed)
+        {
+            if (slideLoopSource != null && slideLoopSource.isPlaying && enableSlidePitchModulation)
+            {
+                float t = Mathf.InverseLerp(baseSpeed, maxSpeed, currentSpeed);
+                float targetPitch = Mathf.Lerp(slideMinPitch, slideMaxPitch, t);
+                slideLoopSource.pitch = Mathf.MoveTowards(slideLoopSource.pitch, targetPitch, Time.deltaTime * 3f);
+            }
+        }
+
+        public void StopSlideAudio()
+        {
+            if (slideLoopSource != null && slideLoopSource.isPlaying)
+            {
+                slideLoopSource.Stop();
+            }
+
+            if (slideEndClip != null)
+            {
+                footstepSource.PlayOneShot(slideEndClip, slideVolume);
+            }
+        }
+
         public void PlayTackleSound()
         {
             PlayRandomAudioClip(tackleClips, tackleVolume);
@@ -473,7 +540,10 @@ namespace EasyPeasyFirstPersonController
             {
                 if (currentState is PlayerSlidingState slidingState)
                 {
-                    slidingState.RegisterTackle(contactPoint, enemy);
+                    if (slidingState.CurrentSpeed >= minTackleSpeed)
+                    {
+                        slidingState.RegisterTackle(contactPoint, enemy);
+                    }
                 }
             }
         }

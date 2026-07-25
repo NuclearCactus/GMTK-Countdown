@@ -9,6 +9,9 @@ namespace EasyPeasyFirstPersonController
         private Vector3 slideDirection;
         private float currentTackleBonusSpeed;
         private int tackleComboCount;
+        private bool tackledThisFrame;
+
+        public float CurrentSpeed { get; private set; }
 
         public PlayerSlidingState(FirstPersonController currentContext, PlayerStateFactory playerStateFactory)
             : base(currentContext, playerStateFactory) { }
@@ -18,7 +21,9 @@ namespace EasyPeasyFirstPersonController
             slideTimer = ctx.slideDuration;
             currentTackleBonusSpeed = 0f;
             tackleComboCount = 0;
-            ctx.PlaySlideSound();
+            tackledThisFrame = false;
+            CurrentSpeed = ctx.slideSpeed;
+            ctx.StartSlideAudio();
 
             if (!ctx.enableSmoothCrouch)
             {
@@ -35,6 +40,7 @@ namespace EasyPeasyFirstPersonController
             if (enemy == null || enemy.IsDefeated)
                 return;
 
+            tackledThisFrame = true;
             tackleComboCount++;
             currentTackleBonusSpeed = Mathf.Min(currentTackleBonusSpeed + ctx.tackleSpeedBoost, ctx.maxTackleBonusSpeed);
             slideTimer = Mathf.Max(slideTimer + ctx.tackleDurationBonus, ctx.slideDuration);
@@ -118,12 +124,16 @@ namespace EasyPeasyFirstPersonController
             }
         }
 
-        public override void ExitState() { }
+        public override void ExitState()
+        {
+            ctx.StopSlideAudio();
+        }
 
         public override void CheckSwitchStates()
         {
             if (ctx.input.jump && ctx.isGrounded && !ctx.HasCeiling())
             {
+                CheckAndApplySlideJumpBoost();
                 SwitchState(factory.Jumping());
                 return;
             }
@@ -141,14 +151,64 @@ namespace EasyPeasyFirstPersonController
             }
         }
 
+        private void CheckAndApplySlideJumpBoost()
+        {
+            if (!ctx.enableSlideJumpBoost || ctx.slideDuration <= 0f)
+                return;
+
+            float slideProgressElapsed = 1f - Mathf.Clamp01(slideTimer / ctx.slideDuration);
+
+            // Check if jump occurred within the boost window (e.g. 80% to 95% elapsed)
+            if (slideProgressElapsed >= ctx.slideJumpBoostWindow.x && slideProgressElapsed <= ctx.slideJumpBoostWindow.y)
+            {
+                // Speed-scaling: higher current slide speed results in a greater jump boost
+                float speedRatio = (ctx.slideSpeed + currentTackleBonusSpeed) / Mathf.Max(0.1f, ctx.slideSpeed);
+                float boostFactor = 1f + ((ctx.slideJumpBoostMultiplier - 1f) * speedRatio);
+
+                // Boost horizontal momentum vector
+                if (ctx.currentVelocity.sqrMagnitude > 0.1f)
+                {
+                    ctx.currentVelocity *= boostFactor;
+                }
+                else
+                {
+                    ctx.currentVelocity = ctx.transform.forward * (ctx.slideSpeed * boostFactor);
+                }
+
+                // Visual & Audio Feedback for landing the frame-perfect slide jump boost
+                ctx.TriggerCameraShake(0.2f, 0.25f, ctx.transform.forward);
+
+                if (ctx.slideJumpBoostClip != null && ctx.footstepSource != null)
+                {
+                    ctx.footstepSource.PlayOneShot(ctx.slideJumpBoostClip, ctx.slideJumpBoostVolume);
+                }
+            }
+        }
+
         private void HandleSlideMovement(float progress)
         {
             float speedCurve = Mathf.Pow(progress, 0.5f);
             float speed = (ctx.slideSpeed + currentTackleBonusSpeed) * Mathf.Lerp(0.5f, 1f, speedCurve) * ctx.GetEnemySpeedMultiplier();
+            CurrentSpeed = speed;
+            ctx.UpdateSlideAudio(speed, ctx.slideSpeed, ctx.slideSpeed + ctx.maxTackleBonusSpeed);
 
-            // Allow the player to steer left/right while sliding
+            // Smoothly rotate the slide direction vector towards the camera look direction based on steering scaling setting
+            if (ctx.slideSteeringSpeedScaling > 0f)
+            {
+                float turnRate = Mathf.Lerp(0f, 10f, ctx.slideSteeringSpeedScaling);
+                Vector3 targetForward = ctx.transform.forward;
+                targetForward.y = slideDirection.y;
+                if (targetForward.sqrMagnitude > 0.001f)
+                {
+                    slideDirection = Vector3.Slerp(slideDirection, targetForward.normalized, Time.deltaTime * turnRate).normalized;
+                }
+            }
+
+            // Allow the player to steer left/right while sliding, scaling strafe force with speed to maintain full control
             float strafeInput = ctx.input.moveInput.x;
-            Vector3 steerVector = ctx.transform.right * strafeInput * ctx.slideSteerControl;
+            float speedRatio = speed / Mathf.Max(0.1f, ctx.slideSpeed);
+            float effectiveSteer = ctx.slideSteerControl * Mathf.Lerp(1f, speedRatio, ctx.slideSteeringSpeedScaling);
+            Vector3 steerVector = ctx.transform.right * strafeInput * effectiveSteer;
             
             // Combine forward sliding momentum with sideways steering
             Vector3 finalMove = (slideDirection * speed) + steerVector;
@@ -158,15 +218,15 @@ namespace EasyPeasyFirstPersonController
 
             ctx.characterController.Move(finalMove * Time.deltaTime);
 
-            // Crash Detection (Did we hit a wall while sliding?)
+            // Crash Detection (Did we hit a static wall while sliding?)
             Vector3 actualVelocity = ctx.characterController.velocity;
             actualVelocity.y = 0; // Only care about horizontal crashes
             
             float intendedSpeed = finalMove.magnitude;
             float actualSpeed = actualVelocity.magnitude;
 
-            // If we were sliding fast but our actual speed is near zero, we smashed into a wall!
-            if (intendedSpeed > 4f && actualSpeed < intendedSpeed * 0.2f)
+            // If we were sliding fast but hit a static wall, end slide forcefully (skip if we tackled an enemy this frame)
+            if (!tackledThisFrame && intendedSpeed > 4f && actualSpeed < intendedSpeed * 0.2f)
             {
                 // Calculate which side we hit
                 Vector3 crashVector = finalMove - actualVelocity;
@@ -179,6 +239,8 @@ namespace EasyPeasyFirstPersonController
                 SwitchState(factory.Crouching());
                 return;
             }
+
+            tackledThisFrame = false;
 
             if (ctx.isGrounded) ctx.moveDirection.y = -20f;
             else ctx.moveDirection.y = 0;
