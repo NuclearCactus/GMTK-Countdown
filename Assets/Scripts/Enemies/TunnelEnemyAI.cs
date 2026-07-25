@@ -20,6 +20,12 @@ namespace GMTKCountdown.Enemies
         [SerializeField] private float chaseExitMultiplier = 1.2f;
         [SerializeField] private float turnSpeed = 8f;
         [SerializeField] private bool keepHeightFixed = true;
+        [SerializeField] private LayerMask groundMask = ~0;
+        [SerializeField] private float groundProbeHeight = 4f;
+        [SerializeField] private float groundProbeDistance = 12f;
+        [SerializeField] private float groundStickSpeed = 12f;
+        [SerializeField] private float groundFallbackFallSpeed = 12f;
+        [SerializeField] private float groundSurfaceOffset = 0.05f;
 
         [Header("Contact / Multi-Enemy Steering")]
         // How far from the player's pivot this enemy stops when chasing. Should
@@ -48,8 +54,26 @@ namespace GMTKCountdown.Enemies
         private float repathTimer;
         private bool chasing;
         private EntityId threatId;
+        private bool isDefeated;
+
+        public bool IsDefeated => isDefeated;
 
         private Animator enemyAnimator;
+
+        public void DefeatByTackle(Vector3 contactPoint, GameObject vfxPrefab)
+        {
+            if (isDefeated)
+                return;
+
+            isDefeated = true;
+
+            if (vfxPrefab != null)
+            {
+                Instantiate(vfxPrefab, contactPoint, Quaternion.identity);
+            }
+
+            Destroy(gameObject);
+        }
 
         private void Awake()
         {
@@ -69,6 +93,8 @@ namespace GMTKCountdown.Enemies
             homePosition = rb.position;
             threatId = GetEntityId();
             RandomizeProfile();
+            SnapToGroundImmediate();
+            homePosition = rb.position;
             ResolvePlayer();
             PickNewWanderTarget();
         }
@@ -166,10 +192,10 @@ namespace GMTKCountdown.Enemies
             }
 
             if (keepHeightFixed)
-            {
-                targetPosition.y = homePosition.y;
-                facingPoint.y = homePosition.y;
-            }
+                facingPoint.y = rb.position.y;
+
+            targetPosition = StickToGround(targetPosition);
+            facingPoint = StickToGround(facingPoint);
 
             Vector3 facingVector = facingPoint - rb.position;
             if (keepHeightFixed)
@@ -183,6 +209,59 @@ namespace GMTKCountdown.Enemies
 
             Vector3 newPosition = Vector3.MoveTowards(rb.position, targetPosition, moveSpeed * Time.fixedDeltaTime);
             rb.MovePosition(newPosition);
+        }
+
+        private Vector3 StickToGround(Vector3 position)
+        {
+            if (TryGetGroundPoint(position, out Vector3 groundPoint))
+            {
+                float targetY = groundPoint.y + groundSurfaceOffset;
+                position.y = Mathf.MoveTowards(position.y, targetY, groundStickSpeed * Time.fixedDeltaTime);
+            }
+            else
+            {
+                position.y -= groundFallbackFallSpeed * Time.fixedDeltaTime;
+            }
+
+            return position;
+        }
+
+        private void SnapToGroundImmediate()
+        {
+            if (TryGetGroundPoint(rb.position, out Vector3 groundPoint))
+            {
+                Vector3 snappedPosition = rb.position;
+                snappedPosition.y = groundPoint.y + groundSurfaceOffset;
+                rb.position = snappedPosition;
+            }
+        }
+
+        private bool TryGetGroundPoint(Vector3 position, out Vector3 groundPoint)
+        {
+            Vector3 origin = position + Vector3.up * groundProbeHeight;
+            float maxDistance = groundProbeHeight + groundProbeDistance;
+            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, maxDistance, groundMask, QueryTriggerInteraction.Ignore);
+
+            float closestDistance = float.MaxValue;
+            groundPoint = default;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit hit = hits[i];
+                if (hit.collider == null)
+                    continue;
+
+                if (hit.collider.transform == transform || hit.collider.transform.IsChildOf(transform))
+                    continue;
+
+                if (hit.distance < closestDistance)
+                {
+                    closestDistance = hit.distance;
+                    groundPoint = hit.point;
+                }
+            }
+
+            return closestDistance < float.MaxValue;
         }
 
         private Vector3 ComputeChaseTargetPosition()

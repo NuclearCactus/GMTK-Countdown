@@ -1,17 +1,23 @@
 namespace EasyPeasyFirstPersonController
 {
+    using GMTKCountdown.Enemies;
     using UnityEngine;
 
     public class PlayerSlidingState : PlayerBaseState
     {
         private float slideTimer;
         private Vector3 slideDirection;
+        private float currentTackleBonusSpeed;
+        private int tackleComboCount;
+
         public PlayerSlidingState(FirstPersonController currentContext, PlayerStateFactory playerStateFactory)
             : base(currentContext, playerStateFactory) { }
 
         public override void EnterState()
         {
             slideTimer = ctx.slideDuration;
+            currentTackleBonusSpeed = 0f;
+            tackleComboCount = 0;
             ctx.PlaySlideSound();
 
             if (!ctx.enableSmoothCrouch)
@@ -22,6 +28,24 @@ namespace EasyPeasyFirstPersonController
             }
 
             slideDirection = ctx.transform.forward;
+        }
+
+        public void RegisterTackle(Vector3 contactPoint, TunnelEnemyAI enemy)
+        {
+            if (enemy == null || enemy.IsDefeated)
+                return;
+
+            tackleComboCount++;
+            currentTackleBonusSpeed = Mathf.Min(currentTackleBonusSpeed + ctx.tackleSpeedBoost, ctx.maxTackleBonusSpeed);
+            slideTimer = Mathf.Max(slideTimer + ctx.tackleDurationBonus, ctx.slideDuration);
+
+            // Re-align slide momentum in the look direction so speed carries forward seamlessly
+            slideDirection = ctx.transform.forward;
+
+            ctx.PlayTackleSound();
+            ctx.TriggerCameraShake(ctx.tackleCameraShakeIntensity, ctx.tackleCameraShakeDuration, ctx.transform.forward);
+
+            enemy.DefeatByTackle(contactPoint, ctx.tackleVfxPrefab);
         }
 
         public override void UpdateState()
@@ -120,7 +144,7 @@ namespace EasyPeasyFirstPersonController
         private void HandleSlideMovement(float progress)
         {
             float speedCurve = Mathf.Pow(progress, 0.5f);
-            float speed = ctx.slideSpeed * Mathf.Lerp(0.5f, 1f, speedCurve) * ctx.GetEnemySpeedMultiplier();
+            float speed = (ctx.slideSpeed + currentTackleBonusSpeed) * Mathf.Lerp(0.5f, 1f, speedCurve) * ctx.GetEnemySpeedMultiplier();
 
             // Allow the player to steer left/right while sliding
             float strafeInput = ctx.input.moveInput.x;

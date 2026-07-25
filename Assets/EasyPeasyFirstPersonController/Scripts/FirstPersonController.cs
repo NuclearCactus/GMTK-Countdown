@@ -2,6 +2,7 @@ namespace EasyPeasyFirstPersonController
 {
     using System.Collections.Generic;
     using UnityEngine;
+    using GMTKCountdown.Enemies;
 
     public partial class FirstPersonController : MonoBehaviour
     {
@@ -45,6 +46,16 @@ namespace EasyPeasyFirstPersonController
         public float jumpVolume = 1f;
         public float slideVolume = 1f;
 
+        [Header("Sliding Tackle Settings")]
+        public float tackleSpeedBoost = 3f;
+        public float tackleDurationBonus = 0.5f;
+        public float maxTackleBonusSpeed = 15f;
+        public AudioClip[] tackleClips;
+        public float tackleVolume = 1f;
+        public GameObject tackleVfxPrefab;
+        public float tackleCameraShakeIntensity = 0.3f;
+        public float tackleCameraShakeDuration = 0.2f;
+
         [HideInInspector] public CharacterController characterController;
         [HideInInspector] public IInputManager input;
         [HideInInspector] public Vector3 moveDirection;
@@ -60,6 +71,7 @@ namespace EasyPeasyFirstPersonController
         private int lastFootstepIndex = -1;
 
         public PlayerBaseState CurrentState { get => currentState; set => currentState = value; }
+        public bool IsSliding => currentState is PlayerSlidingState;
 
         [Header("Visual Settings")]
         public float normalFov = 60f;
@@ -315,6 +327,11 @@ namespace EasyPeasyFirstPersonController
             PlayRandomAudioClip(slideClips, slideVolume);
         }
 
+        public void PlayTackleSound()
+        {
+            PlayRandomAudioClip(tackleClips, tackleVolume);
+        }
+
         public float GetEnemySpeedMultiplier()
         {
             return Mathf.Lerp(1f, enemySlowMinMultiplier, enemyPressureCurrent);
@@ -425,11 +442,39 @@ namespace EasyPeasyFirstPersonController
             return false;
         }
 
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            if (hit != null && hit.gameObject != null)
+            {
+                TryTackleEnemy(hit.gameObject, hit.point);
+            }
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             if (((1 << other.gameObject.layer) & waterMask) != 0)
             {
                 isInWater = true;
+            }
+
+            if (other != null && other.gameObject != null)
+            {
+                TryTackleEnemy(other.gameObject, other.ClosestPoint(transform.position));
+            }
+        }
+
+        private void TryTackleEnemy(GameObject targetObj, Vector3 contactPoint)
+        {
+            if (!IsSliding)
+                return;
+
+            TunnelEnemyAI enemy = targetObj.GetComponentInParent<TunnelEnemyAI>();
+            if (enemy != null && !enemy.IsDefeated)
+            {
+                if (currentState is PlayerSlidingState slidingState)
+                {
+                    slidingState.RegisterTackle(contactPoint, enemy);
+                }
             }
         }
 
