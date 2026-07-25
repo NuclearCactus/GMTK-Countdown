@@ -1,5 +1,6 @@
 namespace EasyPeasyFirstPersonController
 {
+    using System.Collections.Generic;
     using UnityEngine;
 
     public partial class FirstPersonController : MonoBehaviour
@@ -36,9 +37,13 @@ namespace EasyPeasyFirstPersonController
         [Header("Audio")]
         public AudioSource footstepSource;
         public AudioClip[] footstepClips;
+        public AudioClip[] jumpClips;
+        public AudioClip[] slideClips;
         public float footstepStepDistance = 1.6f;
         public float footstepMinSpeed = 0.15f;
         public float footstepVolume = 1f;
+        public float jumpVolume = 1f;
+        public float slideVolume = 1f;
 
         [HideInInspector] public CharacterController characterController;
         [HideInInspector] public IInputManager input;
@@ -107,8 +112,21 @@ namespace EasyPeasyFirstPersonController
         public bool useCameraTilt = true;
         public bool useClimbTilt = true;
 
+        [Header("Enemy Pressure")]
+        public float enemySlowMinMultiplier = 0.45f;
+        public float enemyPressureRiseSpeed = 10f;
+        public float enemyPressureFallSpeed = 3.5f;
+        public float enemyCameraSinkAmount = 0.28f;
+        public float enemyCameraSinkRiseSpeed = 12f;
+        public float enemyCameraSinkFallSpeed = 5f;
+
         [Header("Debug")]
         public bool currentStateDebug = true;
+
+        private readonly Dictionary<EntityId, float> enemyThreats = new Dictionary<EntityId, float>();
+        private float enemyPressureTarget;
+        private float enemyPressureCurrent;
+        private float enemyCameraSinkCurrent;
 
         void OnGUI()
         {
@@ -150,6 +168,8 @@ namespace EasyPeasyFirstPersonController
                 currentLedgeCooldown -= Time.deltaTime;
 
             isGrounded = characterController.isGrounded || Physics.CheckSphere(groundCheck.position, characterController.radius * 0.9f, groundMask, QueryTriggerInteraction.Ignore);
+
+            UpdateEnemyPressure();
 
             currentState.UpdateState();
             HandleRotation();
@@ -198,7 +218,7 @@ namespace EasyPeasyFirstPersonController
             }
 
             // Smoothly transition the actual camera Y to include the bob offset
-            float desiredY = originalCamY + targetBobOffset;
+            float desiredY = originalCamY + targetBobOffset + enemyCameraSinkCurrent;
             
             // Apply Camera Shake (Realistic Directional Impact)
             if (cameraShakeTimer > 0)
@@ -244,7 +264,19 @@ namespace EasyPeasyFirstPersonController
             Vector3 horizontalVelocity = characterController.velocity;
             horizontalVelocity.y = 0f;
 
-            bool shouldPlayFootsteps = isGrounded && !isInWater && horizontalVelocity.magnitude >= footstepMinSpeed;
+            // Require actual player input in addition to the velocity check.
+            // characterController.velocity reflects ANY displacement resolved
+            // during the last Move() call, including depenetration from an
+            // overlapping collider (e.g. an enemy standing in the player) - not
+            // just deliberate walking. Without this gate, a stationary player
+            // being brushed/overlapped by an enemy could get a velocity blip
+            // that repeatedly crosses footstepMinSpeed and machine-guns the
+            // footstep sound. Gating on input makes footsteps only ever fire
+            // from the player's own movement, regardless of what else nudges
+            // the CharacterController.
+            bool intentionalMovement = input.moveInput.sqrMagnitude > 0.01f;
+
+            bool shouldPlayFootsteps = isGrounded && !isInWater && intentionalMovement && horizontalVelocity.magnitude >= footstepMinSpeed;
             if (!shouldPlayFootsteps)
             {
                 wasFootstepMoving = false;
@@ -273,6 +305,55 @@ namespace EasyPeasyFirstPersonController
             }
         }
 
+        public void PlayJumpSound()
+        {
+            PlayRandomAudioClip(jumpClips, jumpVolume);
+        }
+
+        public void PlaySlideSound()
+        {
+            PlayRandomAudioClip(slideClips, slideVolume);
+        }
+
+        public float GetEnemySpeedMultiplier()
+        {
+            return Mathf.Lerp(1f, enemySlowMinMultiplier, enemyPressureCurrent);
+        }
+
+        public void ReportEnemyThreat(EntityId sourceId, float threat)
+        {
+            threat = Mathf.Clamp01(threat);
+
+            if (threat <= 0f)
+                enemyThreats.Remove(sourceId);
+            else
+                enemyThreats[sourceId] = threat;
+        }
+
+        public void ClearEnemyThreat(EntityId sourceId)
+        {
+            enemyThreats.Remove(sourceId);
+        }
+
+        private void UpdateEnemyPressure()
+        {
+            float target = 0f;
+            foreach (float threat in enemyThreats.Values)
+            {
+                if (threat > target)
+                    target = threat;
+            }
+
+            enemyPressureTarget = target;
+
+            float pressureSpeed = enemyPressureTarget > enemyPressureCurrent ? enemyPressureRiseSpeed : enemyPressureFallSpeed;
+            enemyPressureCurrent = Mathf.MoveTowards(enemyPressureCurrent, enemyPressureTarget, Time.deltaTime * pressureSpeed);
+
+            float sinkTarget = -enemyCameraSinkAmount * enemyPressureCurrent;
+            float sinkSpeed = sinkTarget < enemyCameraSinkCurrent ? enemyCameraSinkRiseSpeed : enemyCameraSinkFallSpeed;
+            enemyCameraSinkCurrent = Mathf.MoveTowards(enemyCameraSinkCurrent, sinkTarget, Time.deltaTime * sinkSpeed);
+        }
+
         private void PlayFootstep()
         {
             if (footstepClips == null || footstepClips.Length == 0 || footstepSource == null)
@@ -288,6 +369,19 @@ namespace EasyPeasyFirstPersonController
 
             lastFootstepIndex = clipIndex;
             footstepSource.PlayOneShot(clip, footstepVolume);
+        }
+
+        private void PlayRandomAudioClip(AudioClip[] clips, float volume)
+        {
+            if (footstepSource == null || clips == null || clips.Length == 0)
+                return;
+
+            int clipIndex = Random.Range(0, clips.Length);
+            AudioClip clip = clips[clipIndex];
+            if (clip == null)
+                return;
+
+            footstepSource.PlayOneShot(clip, volume);
         }
 
         [HideInInspector] public Vector3 cameraShakeDirection;

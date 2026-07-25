@@ -17,9 +17,10 @@ namespace EasyPeasyFirstPersonController
             CheckSwitchStates();
 
             ctx.targetCameraY = ctx.standingCameraHeight;
+            float enemyMultiplier = ctx.GetEnemySpeedMultiplier();
 
             bool isSprinting = ctx.input.sprint && ctx.input.moveInput.y > 0;
-            float speed = isSprinting ? ctx.sprintSpeed : ctx.walkSpeed;
+            float speed = (isSprinting ? ctx.sprintSpeed : ctx.walkSpeed) * enemyMultiplier;
 
             ctx.targetFov = isSprinting ? ctx.sprintFov : ctx.normalFov;
             ctx.currentBobIntensity = ctx.bobAmount * (isSprinting ? 1.5f : 1f);

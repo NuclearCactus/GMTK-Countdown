@@ -63,7 +63,7 @@ namespace EasyPeasyFirstPersonController
             Vector3 targetMove = ctx.transform.right * input.x + ctx.transform.forward * input.y;
             targetMove = Vector3.ClampMagnitude(targetMove, 1f);
 
-            Vector3 targetVelocity = targetMove * ctx.crouchSpeed;
+            Vector3 targetVelocity = targetMove * ctx.crouchSpeed * ctx.GetEnemySpeedMultiplier();
             float accelRate = (input.sqrMagnitude > 0.01f) ? ctx.groundAcceleration : ctx.groundDeceleration;
 
             ctx.currentVelocity = Vector3.MoveTowards(ctx.currentVelocity, targetVelocity, accelRate * Time.deltaTime);
