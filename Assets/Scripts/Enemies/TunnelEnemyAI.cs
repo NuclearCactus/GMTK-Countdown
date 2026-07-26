@@ -61,7 +61,7 @@ namespace GMTKCountdown.Enemies
 
         private Animator enemyAnimator;
 
-        public void DefeatByTackle(Vector3 contactPoint, GameObject vfxPrefab)
+        public virtual void DefeatByTackle(Vector3 contactPoint, GameObject vfxPrefab)
         {
             if (isDefeated)
                 return;
@@ -76,7 +76,7 @@ namespace GMTKCountdown.Enemies
             Destroy(gameObject);
         }
 
-        private void Awake()
+        protected virtual void Awake()
         {
             rb = GetComponent<Rigidbody>();
             enemyAnimator = GetComponent<Animator>();
@@ -119,7 +119,7 @@ namespace GMTKCountdown.Enemies
         // All movement now happens on the physics tick via Rigidbody, in lockstep
         // with Unity's collision resolution, instead of stomping transform.position
         // every render frame. This is what actually removes the jitter.
-        private void FixedUpdate()
+        protected virtual void FixedUpdate()
         {
             if (player == null)
                 ResolvePlayer();
