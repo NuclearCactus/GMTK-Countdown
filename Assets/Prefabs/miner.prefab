@@ -119,6 +119,14 @@ MonoBehaviour:
   chaseExitMultiplier: 1.2
   turnSpeed: 8
   keepHeightFixed: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  groundProbeHeight: 4
+  groundProbeDistance: 12
+  groundStickSpeed: 12
+  groundFallbackFallSpeed: 12
+  groundSurfaceOffset: 0.05
   contactDistanceRange: {x: 0.9, y: 1.2}
   separationRadius: 2
   separationWeight: 1.5

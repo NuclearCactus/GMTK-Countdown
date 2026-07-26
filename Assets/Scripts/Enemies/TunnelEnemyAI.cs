@@ -17,6 +17,7 @@ namespace GMTKCountdown.Enemies
         [SerializeField] private Vector2 repathTimeRange = new Vector2(0.6f, 1.6f);
 
         [Header("Behaviour")]
+        [SerializeField] private bool stationaryWhenIdle = false;
         [SerializeField] private float chaseExitMultiplier = 1.2f;
         [SerializeField] private float turnSpeed = 8f;
         [SerializeField] private bool keepHeightFixed = true;
@@ -170,25 +171,33 @@ namespace GMTKCountdown.Enemies
 
             if (chasing)
             {
-                enemyAnimator.SetBool("isChasing", true);
-                // Facing always points straight at the player - only the actual
-                // travel target gets bent by the contact-distance/separation math
-                // below, so the enemy doesn't visually swivel away from the player
-                // while it's just shuffling sideways around other enemies.
+                if (enemyAnimator != null)
+                    enemyAnimator.SetBool("isChasing", true);
                 targetPosition = ComputeChaseTargetPosition();
                 facingPoint = player.transform.position;
                 moveSpeed = chaseSpeed;
             }
             else
             {
-                enemyAnimator.SetBool("isChasing", false);
-                repathTimer -= Time.fixedDeltaTime;
-                if (repathTimer <= 0f || Vector3.Distance(rb.position, wanderTarget) <= 0.25f)
-                    PickNewWanderTarget();
+                if (enemyAnimator != null)
+                    enemyAnimator.SetBool("isChasing", false);
 
-                targetPosition = wanderTarget;
-                facingPoint = wanderTarget;
-                moveSpeed = loiterSpeed;
+                if (stationaryWhenIdle)
+                {
+                    targetPosition = homePosition;
+                    facingPoint = homePosition + transform.forward;
+                    moveSpeed = 0f;
+                }
+                else
+                {
+                    repathTimer -= Time.fixedDeltaTime;
+                    if (repathTimer <= 0f || Vector3.Distance(rb.position, wanderTarget) <= 0.25f)
+                        PickNewWanderTarget();
+
+                    targetPosition = wanderTarget;
+                    facingPoint = wanderTarget;
+                    moveSpeed = loiterSpeed;
+                }
             }
 
             if (keepHeightFixed)
