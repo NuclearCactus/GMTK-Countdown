@@ -186,6 +186,12 @@ namespace EasyPeasyFirstPersonController
 
         private void HandleSlideMovement(float progress)
         {
+            // Apply friction/decay to currentTackleBonusSpeed so speed bursts decay back to normal sliding speed
+            if (currentTackleBonusSpeed > 0f)
+            {
+                currentTackleBonusSpeed = Mathf.MoveTowards(currentTackleBonusSpeed, 0f, Time.deltaTime * ctx.tackleBonusFriction);
+            }
+
             float speedCurve = Mathf.Pow(progress, 0.5f);
             float speed = (ctx.slideSpeed + currentTackleBonusSpeed) * Mathf.Lerp(0.5f, 1f, speedCurve) * ctx.GetEnemySpeedMultiplier();
             CurrentSpeed = speed;

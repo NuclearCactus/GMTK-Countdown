@@ -59,6 +59,7 @@ namespace EasyPeasyFirstPersonController
         public float tackleSpeedBoost = 3f;
         public float tackleDurationBonus = 0.5f;
         public float maxTackleBonusSpeed = 15f;
+        public float tackleBonusFriction = 6f;
         public float minTackleSpeed = 0f;
         public AudioClip[] tackleClips;
         public float tackleVolume = 1f;
