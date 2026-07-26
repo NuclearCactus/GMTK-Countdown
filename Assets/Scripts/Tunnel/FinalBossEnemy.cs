@@ -1,6 +1,7 @@
 namespace GMTKCountdown.Tunnel
 {
     using UnityEngine;
+    using UnityEngine.InputSystem;
     using EasyPeasyFirstPersonController;
 
     public class FinalBossEnemy : MonoBehaviour
@@ -45,7 +46,8 @@ namespace GMTKCountdown.Tunnel
 
         private void Update()
         {
-            if (hasTriggeredFinish && Input.GetKeyDown(KeyCode.R))
+            bool isRPressed = Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
+            if (hasTriggeredFinish && isRPressed)
             {
                 if (timerManager != null)
                 {

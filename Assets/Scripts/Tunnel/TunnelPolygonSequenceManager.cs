@@ -60,7 +60,7 @@ namespace GMTKCountdown.Tunnel
         {
             if (gameOver)
             {
-                if (Input.GetKeyDown(restartKey) || Input.GetKeyDown(KeyCode.R) || (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame))
+                if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                     RestartScene();
 
                 return;

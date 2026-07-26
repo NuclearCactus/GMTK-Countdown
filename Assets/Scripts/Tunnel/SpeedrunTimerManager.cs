@@ -1,6 +1,7 @@
 namespace GMTKCountdown.Tunnel
 {
     using UnityEngine;
+    using UnityEngine.InputSystem;
     using UnityEngine.SceneManagement;
     using TMPro;
     using EasyPeasyFirstPersonController;
@@ -76,8 +77,9 @@ namespace GMTKCountdown.Tunnel
                 }
             }
 
-            // Listen for restart key input
-            if ((isFinished || allowRestartAnytime) && (Input.GetKeyDown(restartKey) || Input.GetKeyDown(KeyCode.R)))
+            // Listen for restart key input via Unity Input System
+            bool isRPressed = Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
+            if ((isFinished || allowRestartAnytime) && isRPressed)
             {
                 RestartLevel();
             }
