@@ -43,7 +43,8 @@ namespace EasyPeasyFirstPersonController
 
         private void HandleJump()
         {
-            ctx.moveDirection.y = ctx.jumpSpeed;
+            ctx.moveDirection.y = ctx.jumpSpeed * ctx.activeJumpSpeedBoost;
+            ctx.activeJumpSpeedBoost = 1f; // Reset after applying
         }
 
         private void ApplyGravity()
@@ -55,6 +56,11 @@ namespace EasyPeasyFirstPersonController
         private void HandleAirMovement()
         {
             Vector2 input = ctx.input.moveInput;
+            if (ctx.alwaysSprint)
+            {
+                input.y = 1f;
+                input = input.normalized;
+            }
             Vector3 targetMove = ctx.transform.right * input.x + ctx.transform.forward * input.y;
             targetMove = Vector3.ClampMagnitude(targetMove, 1f);
             

@@ -153,29 +153,27 @@ namespace EasyPeasyFirstPersonController
 
         private void CheckAndApplySlideJumpBoost()
         {
-            if (!ctx.enableSlideJumpBoost || ctx.slideDuration <= 0f)
+            if (!ctx.enableSlideJumpBoost)
                 return;
 
-            float slideProgressElapsed = 1f - Mathf.Clamp01(slideTimer / ctx.slideDuration);
-
-            // Check if jump occurred within the boost window (e.g. 80% to 95% elapsed)
-            if (slideProgressElapsed >= ctx.slideJumpBoostWindow.x && slideProgressElapsed <= ctx.slideJumpBoostWindow.y)
+            // Check if player has tackled an enemy and gained boosted speed
+            if (currentTackleBonusSpeed > 0f)
             {
-                // Speed-scaling: higher current slide speed results in a greater jump boost
-                float speedRatio = (ctx.slideSpeed + currentTackleBonusSpeed) / Mathf.Max(0.1f, ctx.slideSpeed);
-                float boostFactor = 1f + ((ctx.slideJumpBoostMultiplier - 1f) * speedRatio);
+                // Fixed boost factor (non-dynamic) to prevent flying off at extreme speeds
+                float boostFactor = ctx.slideJumpBoostMultiplier;
 
-                // Boost horizontal momentum vector
-                if (ctx.currentVelocity.sqrMagnitude > 0.1f)
-                {
-                    ctx.currentVelocity *= boostFactor;
-                }
-                else
-                {
-                    ctx.currentVelocity = ctx.transform.forward * (ctx.slideSpeed * boostFactor);
-                }
+                // Set horizontal velocity to a fixed boosted speed in the movement direction
+                Vector3 moveDir = slideDirection.sqrMagnitude > 0.001f ? slideDirection : ctx.transform.forward;
+                ctx.currentVelocity = moveDir.normalized * (ctx.slideSpeed * boostFactor);
 
-                // Visual & Audio Feedback for landing the frame-perfect slide jump boost
+                // Set flags for PlayerJumpingState and PlayerFallState to handle vertical boost and landing
+                ctx.resumeSlideOnLand = true;
+                ctx.activeJumpSpeedBoost = boostFactor;
+
+                // Trigger dramatic slow-motion time dilation & camera slow down
+                ctx.TriggerSlideJumpSlowMo(ctx.slideJumpSlowMoTimeScale, ctx.slideJumpSlowMoDuration);
+
+                // Visual & Audio Feedback for landing the boosted slide jump
                 ctx.TriggerCameraShake(0.2f, 0.25f, ctx.transform.forward);
 
                 if (ctx.slideJumpBoostClip != null && ctx.footstepSource != null)

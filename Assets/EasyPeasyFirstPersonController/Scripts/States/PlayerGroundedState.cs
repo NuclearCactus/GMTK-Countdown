@@ -19,7 +19,7 @@ namespace EasyPeasyFirstPersonController
             ctx.targetCameraY = ctx.standingCameraHeight;
             float enemyMultiplier = ctx.GetEnemySpeedMultiplier();
 
-            bool isSprinting = ctx.input.sprint && ctx.input.moveInput.y > 0;
+            bool isSprinting = ctx.alwaysSprint || (ctx.input.sprint && ctx.input.moveInput.sqrMagnitude > 0.01f);
             float speed = (isSprinting ? ctx.sprintSpeed : ctx.walkSpeed) * enemyMultiplier;
 
             ctx.targetFov = isSprinting ? ctx.sprintFov : ctx.normalFov;
@@ -50,6 +50,11 @@ namespace EasyPeasyFirstPersonController
             }
 
             Vector2 input = ctx.input.moveInput;
+            if (ctx.alwaysSprint)
+            {
+                input.y = 1f;
+                input = input.normalized;
+            }
             Vector3 targetMove = ctx.transform.right * input.x + ctx.transform.forward * input.y;
             
             // Normalize diagonal movement so they don't walk 40% faster diagonally
@@ -77,7 +82,7 @@ namespace EasyPeasyFirstPersonController
             {
                 SwitchState(factory.Jumping());
             }
-            else if (ctx.input.slide && ctx.input.sprint)
+            else if (ctx.input.slide && (ctx.alwaysSprint || ctx.input.sprint))
             {
                 SwitchState(factory.Sliding());
             }

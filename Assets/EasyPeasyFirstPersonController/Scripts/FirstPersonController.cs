@@ -7,6 +7,7 @@ namespace EasyPeasyFirstPersonController
     public partial class FirstPersonController : MonoBehaviour
     {
         [Header("Settings")]
+        public bool alwaysSprint = true;
         public float walkSpeed = 3f;
         public float sprintSpeed = 5f;
         public float crouchSpeed = 1.5f;
@@ -72,10 +73,22 @@ namespace EasyPeasyFirstPersonController
         public AudioClip slideJumpBoostClip;
         public float slideJumpBoostVolume = 1f;
 
+        [Header("Slide Jump Slow-Mo / Camera Effect")]
+        public bool enableSlideJumpSlowMo = true;
+        [Range(0.1f, 1.0f)] public float slideJumpSlowMoTimeScale = 0.35f;
+        public float slideJumpSlowMoDuration = 0.35f;
+        public float slideJumpCameraSensitivityMultiplier = 0.5f;
+
+        private float slowMoTimer = 0f;
+        private float slowMoDuration = 0.35f;
+        private float targetTimeScale = 1.0f;
+
         [HideInInspector] public CharacterController characterController;
         [HideInInspector] public IInputManager input;
         [HideInInspector] public Vector3 moveDirection;
         [HideInInspector] public bool isGrounded;
+        [HideInInspector] public bool resumeSlideOnLand;
+        [HideInInspector] public float activeJumpSpeedBoost = 1f;
 
         private PlayerBaseState currentState;
         private PlayerStateFactory states;
@@ -205,6 +218,7 @@ namespace EasyPeasyFirstPersonController
             isGrounded = characterController.isGrounded || Physics.CheckSphere(groundCheck.position, characterController.radius * 0.9f, groundMask, QueryTriggerInteraction.Ignore);
 
             UpdateEnemyPressure();
+            UpdateSlowMotion();
 
             currentState.UpdateState();
             HandleRotation();
@@ -212,10 +226,44 @@ namespace EasyPeasyFirstPersonController
             HandleFootsteps();
         }
 
+        private void OnDisable()
+        {
+            Time.timeScale = 1.0f;
+            Time.fixedDeltaTime = 0.02f;
+        }
+
+        public void TriggerSlideJumpSlowMo(float scale, float duration)
+        {
+            if (!enableSlideJumpSlowMo) return;
+            slowMoDuration = Mathf.Max(0.01f, duration);
+            slowMoTimer = slowMoDuration;
+            targetTimeScale = Mathf.Clamp(scale, 0.05f, 1.0f);
+            Time.timeScale = targetTimeScale;
+            Time.fixedDeltaTime = 0.02f * targetTimeScale;
+        }
+
+        private void UpdateSlowMotion()
+        {
+            if (slowMoTimer > 0f)
+            {
+                slowMoTimer -= Time.unscaledDeltaTime;
+                float progress = 1f - Mathf.Clamp01(slowMoTimer / slowMoDuration);
+                Time.timeScale = Mathf.Lerp(targetTimeScale, 1.0f, progress * progress);
+                Time.fixedDeltaTime = 0.02f * Time.timeScale;
+
+                if (slowMoTimer <= 0f)
+                {
+                    Time.timeScale = 1.0f;
+                    Time.fixedDeltaTime = 0.02f;
+                }
+            }
+        }
+
         private void HandleRotation()
         {
-            float mouseX = input.lookInput.x * mouseSensitivity;
-            float mouseY = input.lookInput.y * mouseSensitivity;
+            float sensMult = (slowMoTimer > 0f) ? slideJumpCameraSensitivityMultiplier : 1f;
+            float mouseX = input.lookInput.x * mouseSensitivity * sensMult;
+            float mouseY = input.lookInput.y * mouseSensitivity * sensMult;
 
             transform.Rotate(Vector3.up * mouseX);
 
@@ -309,7 +357,7 @@ namespace EasyPeasyFirstPersonController
             // footstep sound. Gating on input makes footsteps only ever fire
             // from the player's own movement, regardless of what else nudges
             // the CharacterController.
-            bool intentionalMovement = input.moveInput.sqrMagnitude > 0.01f;
+            bool intentionalMovement = input.moveInput.sqrMagnitude > 0.01f || alwaysSprint;
 
             bool shouldPlayFootsteps = isGrounded && !isInWater && intentionalMovement && horizontalVelocity.magnitude >= footstepMinSpeed;
             if (!shouldPlayFootsteps)

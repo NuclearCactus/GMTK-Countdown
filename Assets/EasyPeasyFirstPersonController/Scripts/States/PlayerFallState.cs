@@ -27,7 +27,15 @@ namespace EasyPeasyFirstPersonController
         {
             if (ctx.isGrounded && ctx.moveDirection.y <= 0)
             {
-                SwitchState(factory.Grounded());
+                if (ctx.resumeSlideOnLand)
+                {
+                    ctx.resumeSlideOnLand = false;
+                    SwitchState(factory.Sliding());
+                }
+                else
+                {
+                    SwitchState(factory.Grounded());
+                }
             }
             else if (ctx.CheckLedge(out _))
             {
@@ -49,6 +57,11 @@ namespace EasyPeasyFirstPersonController
         private void HandleAirMovement()
         {
             Vector2 input = ctx.input.moveInput;
+            if (ctx.alwaysSprint)
+            {
+                input.y = 1f;
+                input = input.normalized;
+            }
             Vector3 targetMove = ctx.transform.right * input.x + ctx.transform.forward * input.y;
             targetMove = Vector3.ClampMagnitude(targetMove, 1f);
             

@@ -17,29 +17,35 @@ namespace EasyPeasyFirstPersonController.EditorScripts
 
         private static void DrawReviewIcon(EntityId entityId, Rect selectionRect)
         {
-            GameObject go = EditorUtility.EntityIdToObject(entityId) as GameObject;
-            if (go == null) return;
-
-            if (go.GetComponent<FirstPersonController>() != null)
+            try
             {
-                Rect iconRect = new Rect(selectionRect.xMax - 20, selectionRect.y, 16, 16);
-                
-                // Newer Unity versions sometimes deprecate specific icon names or change how tooltips are parsed.
-                // It's safer to manually construct the GUIContent with the image and the tooltip.
-                GUIContent iconContent = EditorGUIUtility.IconContent("Favorite");
-                
-                // Fallback icon if "Favorite" isn't found
-                if (iconContent == null || iconContent.image == null)
-                    iconContent = EditorGUIUtility.IconContent("d_Favorite");
+                Object obj = EditorUtility.EntityIdToObject(entityId);
+                if (obj == null) return;
+                GameObject go = obj as GameObject;
+                if (go == null) return;
 
-                GUIContent finalContent = (iconContent != null && iconContent.image != null) 
-                    ? new GUIContent(iconContent.image, "Rate this asset on Asset Store") 
-                    : new GUIContent("★", "Rate this asset on Asset Store");
-
-                if (GUI.Button(iconRect, finalContent, GUIStyle.none))
+                if (go.GetComponent<FirstPersonController>() != null)
                 {
-                    Application.OpenURL(assetStoreUrl);
+                    Rect iconRect = new Rect(selectionRect.xMax - 20, selectionRect.y, 16, 16);
+                    
+                    GUIContent iconContent = EditorGUIUtility.IconContent("Favorite");
+                    
+                    if (iconContent == null || iconContent.image == null)
+                        iconContent = EditorGUIUtility.IconContent("d_Favorite");
+
+                    GUIContent finalContent = (iconContent != null && iconContent.image != null) 
+                        ? new GUIContent(iconContent.image, "Rate this asset on Asset Store") 
+                        : new GUIContent("★", "Rate this asset on Asset Store");
+
+                    if (GUI.Button(iconRect, finalContent, GUIStyle.none))
+                    {
+                        Application.OpenURL(assetStoreUrl);
+                    }
                 }
+            }
+            catch
+            {
+                // Ignore transient hierarchy repaint exceptions during git/scene reloads
             }
         }
     }
