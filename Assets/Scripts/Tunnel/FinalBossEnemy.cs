@@ -15,6 +15,12 @@ namespace GMTKCountdown.Tunnel
         [Tooltip("UI Panel or Canvas element that fades the screen to black upon touching the boss.")]
         public GameObject fadeToBlackPanel;
 
+        [Tooltip("Optional direct reference to Time Taken TextMeshPro element to activate simultaneously.")]
+        public TMPro.TMP_Text timeTakenText;
+
+        [Tooltip("Optional direct reference to Restart TextMeshPro element to activate simultaneously.")]
+        public TMPro.TMP_Text restartText;
+
         [Tooltip("Reference to SpeedrunTimerManager. Automatically located if unassigned.")]
         public SpeedrunTimerManager timerManager;
 
@@ -34,6 +40,31 @@ namespace GMTKCountdown.Tunnel
             if (timerManager == null)
             {
                 timerManager = FindAnyObjectByType<SpeedrunTimerManager>();
+            }
+        }
+
+        private void Update()
+        {
+            if (hasTriggeredFinish && Input.GetKeyDown(KeyCode.R))
+            {
+                if (timerManager != null)
+                {
+                    timerManager.RestartLevel();
+                }
+                else
+                {
+                    Time.timeScale = 1f;
+                    Time.fixedDeltaTime = 0.02f;
+                    UnityEngine.SceneManagement.Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                    if (activeScene.buildIndex >= 0)
+                    {
+                        UnityEngine.SceneManagement.SceneManager.LoadScene(activeScene.buildIndex);
+                    }
+                    else if (!string.IsNullOrEmpty(activeScene.name))
+                    {
+                        UnityEngine.SceneManagement.SceneManager.LoadScene(activeScene.name);
+                    }
+                }
             }
         }
 
@@ -70,10 +101,20 @@ namespace GMTKCountdown.Tunnel
                 dialogueAudioSource.PlayOneShot(dialogueClip);
             }
 
-            // 2. Simply activate fade-to-black UI panel/object
+            // 2. Activate fade-to-black UI panel/object and text objects simultaneously
             if (fadeToBlackPanel != null)
             {
                 fadeToBlackPanel.SetActive(true);
+            }
+
+            if (timeTakenText != null)
+            {
+                timeTakenText.gameObject.SetActive(true);
+            }
+
+            if (restartText != null)
+            {
+                restartText.gameObject.SetActive(true);
             }
 
             // 3. Finish level and display end score

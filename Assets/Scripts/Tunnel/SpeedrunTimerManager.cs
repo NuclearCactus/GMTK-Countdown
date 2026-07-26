@@ -77,7 +77,7 @@ namespace GMTKCountdown.Tunnel
             }
 
             // Listen for restart key input
-            if ((isFinished || allowRestartAnytime) && Input.GetKeyDown(restartKey))
+            if ((isFinished || allowRestartAnytime) && (Input.GetKeyDown(restartKey) || Input.GetKeyDown(KeyCode.R)))
             {
                 RestartLevel();
             }
@@ -121,6 +121,7 @@ namespace GMTKCountdown.Tunnel
             if (timeTakenText != null)
             {
                 timeTakenText.text = "Time taken: " + formattedTimeStr;
+                timeTakenText.gameObject.SetActive(true);
             }
 
             if (restartText != null)
@@ -138,6 +139,7 @@ namespace GMTKCountdown.Tunnel
         public void OnPlayerDeath()
         {
             isTimerRunning = false;
+            isFinished = true; // Mark finished on death so R restart works
 
             if (liveTimerText != null)
             {
@@ -150,7 +152,16 @@ namespace GMTKCountdown.Tunnel
             // Reset timescale in case slow-mo or pause was active
             Time.timeScale = 1f;
             Time.fixedDeltaTime = 0.02f;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            // Debug.Log("Restarting level...");
+            Scene activeScene = SceneManager.GetActiveScene();
+            if (activeScene.buildIndex >= 0)
+            {
+                SceneManager.LoadScene(activeScene.buildIndex);
+            }
+            else if (!string.IsNullOrEmpty(activeScene.name))
+            {
+                SceneManager.LoadScene(activeScene.name);
+            }
         }
 
         public string FormatTime(float timeInSeconds)

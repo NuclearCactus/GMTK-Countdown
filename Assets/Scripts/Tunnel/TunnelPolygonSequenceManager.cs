@@ -22,9 +22,13 @@ namespace GMTKCountdown.Tunnel
         [SerializeField] private float levelSwapInterval = 1.5f;
         [SerializeField] private bool activateFirstLevelOnStart = true;
 
-        [Header("Restart")]
+        [Header("Restart & Death UI")]
         [SerializeField] private KeyCode restartKey = KeyCode.R;
         [SerializeField] private bool reloadActiveSceneOnRestart = true;
+        [Tooltip("Fade to black panel/object activated when player falls after final tunnel level disappears.")]
+        [SerializeField] private GameObject deathFadeToBlackPanel;
+        [Tooltip("Restart text object activated upon player death.")]
+        [SerializeField] private GameObject deathRestartText;
 
         [Header("Audio")]
         [SerializeField] private AudioSource audioSource;
@@ -56,7 +60,7 @@ namespace GMTKCountdown.Tunnel
         {
             if (gameOver)
             {
-                if (Keyboard.current != null && restartKey == KeyCode.R && Keyboard.current.rKey.wasPressedThisFrame)
+                if (Input.GetKeyDown(restartKey) || Input.GetKeyDown(KeyCode.R) || (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame))
                     RestartScene();
 
                 return;
@@ -87,6 +91,16 @@ namespace GMTKCountdown.Tunnel
             swapTimer = 0f;
             gameOver = false;
 
+            if (deathFadeToBlackPanel != null)
+            {
+                deathFadeToBlackPanel.SetActive(false);
+            }
+
+            if (deathRestartText != null)
+            {
+                deathRestartText.SetActive(false);
+            }
+
             for (int i = 0; i < tunnelLevels.Count; i++)
             {
                 GameObject level = tunnelLevels[i];
@@ -109,6 +123,7 @@ namespace GMTKCountdown.Tunnel
             {
                 SetLevelActive(currentLevelIndex, false);
                 gameOver = true;
+                TriggerDeathUI();
                 return;
             }
 
@@ -117,6 +132,25 @@ namespace GMTKCountdown.Tunnel
             SetLevelActive(currentLevelIndex, true);
             NotifyLevelChanged();
             PlayLevelChangeSound();
+        }
+
+        private void TriggerDeathUI()
+        {
+            if (deathFadeToBlackPanel != null)
+            {
+                deathFadeToBlackPanel.SetActive(true);
+            }
+
+            if (deathRestartText != null)
+            {
+                deathRestartText.SetActive(true);
+            }
+
+            var timerManager = FindAnyObjectByType<SpeedrunTimerManager>();
+            if (timerManager != null)
+            {
+                timerManager.OnPlayerDeath();
+            }
         }
 
         private void SetLevelActive(int levelIndex, bool isActive)
@@ -159,17 +193,32 @@ namespace GMTKCountdown.Tunnel
 
         private void RestartScene()
         {
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = 0.02f;
+
             if (reloadActiveSceneOnRestart)
             {
+                Scene activeScene = SceneManager.GetActiveScene();
+                string sceneToLoad = activeScene.name;
+                int buildIndex = activeScene.buildIndex;
+
 #if UNITY_EDITOR
                 Selection.activeObject = null;
                 EditorApplication.delayCall += () =>
                 {
                     if (this != null)
-                        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                    {
+                        if (buildIndex >= 0)
+                            SceneManager.LoadScene(buildIndex);
+                        else if (!string.IsNullOrEmpty(sceneToLoad))
+                            SceneManager.LoadScene(sceneToLoad);
+                    }
                 };
 #else
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                if (buildIndex >= 0)
+                    SceneManager.LoadScene(buildIndex);
+                else if (!string.IsNullOrEmpty(sceneToLoad))
+                    SceneManager.LoadScene(sceneToLoad);
 #endif
             }
             else
