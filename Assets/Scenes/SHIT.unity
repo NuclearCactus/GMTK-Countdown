@@ -2135,10 +2135,12 @@ MonoBehaviour:
   - {fileID: 1842469374}
   - {fileID: 1159159760}
   - {fileID: 1459548442}
-  levelSwapInterval: 60
+  levelSwapInterval: 5
   activateFirstLevelOnStart: 1
   restartKey: 114
   reloadActiveSceneOnRestart: 1
+  deathFadeToBlackPanel: {fileID: 0}
+  deathRestartText: {fileID: 0}
   audioSource: {fileID: 1084826379}
   levelChangeClip: {fileID: 8300000, guid: 07d0813d87b165f4d8021b08e5517535, type: 3}
   orbPickupClip: {fileID: 8300000, guid: df85d6a31b477ad4294afabc4d8d1401, type: 3}
@@ -7702,6 +7704,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8400000, guid: f34723edee1dd1641bcf0fe80775dcbb, type: 2}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
+      propertyPath: gravity
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: bobSpeed
       value: 15
       objectReference: {fileID: 0}
@@ -7711,7 +7717,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: jumpSpeed
-      value: 5
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: sprintFov
@@ -7719,11 +7725,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: slideSpeed
-      value: 6
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
+      propertyPath: crouchSpeed
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: sprintSpeed
-      value: 10
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: slideEndClip
@@ -7735,7 +7745,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: slideFovBoost
-      value: 10
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: slideLoopClip
@@ -7770,8 +7780,20 @@ PrefabInstance:
       value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
+      propertyPath: slideUphillFriction
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: jumpClips.Array.size
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
+      propertyPath: slideJumpBoostVolume
+      value: 0.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
+      propertyPath: crouchTransitionSpeed
+      value: 40
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: slideClips.Array.size
@@ -7784,6 +7806,10 @@ PrefabInstance:
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: tackleClips.Array.size
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
+      propertyPath: tackleHitPauseDuration
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 9156347144040445544, guid: c82236c16aae9d34fbd437f8dea6e2c9, type: 3}
       propertyPath: 'jumpClips.Array.data[0]'
@@ -17786,7 +17812,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.693
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -34344,8 +34370,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3acc8d4fd767c8d49bb209bc5bede855, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EasyPeasyFirstPersonController.AutoRunnerGameMode
-  enableAutoRunnerMode: 1
-  playerController: {fileID: 0}
 --- !u!1001 &2063425121
 PrefabInstance:
   m_ObjectHideFlags: 0

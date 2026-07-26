@@ -75,9 +75,14 @@ namespace EasyPeasyFirstPersonController
 
         [Header("Slide Jump Slow-Mo / Camera Effect")]
         public bool enableSlideJumpSlowMo = true;
-        [Range(0.1f, 1.0f)] public float slideJumpSlowMoTimeScale = 0.35f;
-        public float slideJumpSlowMoDuration = 0.35f;
-        public float slideJumpCameraSensitivityMultiplier = 0.5f;
+        [Range(0.1f, 1.0f)] public float slideJumpSlowMoTimeScale = 0.6f;
+        public float slideJumpSlowMoDuration = 0.15f;
+        public float slideJumpCameraSensitivityMultiplier = 0.75f;
+
+        [Header("Tackle Hit-Pause Settings")]
+        public bool enableTackleHitPause = true;
+        [Range(0.02f, 1.0f)] public float tackleHitPauseTimeScale = 0.05f;
+        public float tackleHitPauseDuration = 0.06f;
 
         private float slowMoTimer = 0f;
         private float slowMoDuration = 0.35f;
@@ -235,9 +240,20 @@ namespace EasyPeasyFirstPersonController
         public void TriggerSlideJumpSlowMo(float scale, float duration)
         {
             if (!enableSlideJumpSlowMo) return;
+            ApplyTimeDilation(scale, duration);
+        }
+
+        public void TriggerTackleHitPause()
+        {
+            if (!enableTackleHitPause) return;
+            ApplyTimeDilation(tackleHitPauseTimeScale, tackleHitPauseDuration);
+        }
+
+        private void ApplyTimeDilation(float scale, float duration)
+        {
             slowMoDuration = Mathf.Max(0.01f, duration);
             slowMoTimer = slowMoDuration;
-            targetTimeScale = Mathf.Clamp(scale, 0.05f, 1.0f);
+            targetTimeScale = Mathf.Clamp(scale, 0.02f, 1.0f);
             Time.timeScale = targetTimeScale;
             Time.fixedDeltaTime = 0.02f * targetTimeScale;
         }

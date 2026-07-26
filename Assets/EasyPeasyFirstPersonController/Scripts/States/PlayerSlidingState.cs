@@ -50,6 +50,7 @@ namespace EasyPeasyFirstPersonController
 
             ctx.PlayTackleSound();
             ctx.TriggerCameraShake(ctx.tackleCameraShakeIntensity, ctx.tackleCameraShakeDuration, ctx.transform.forward);
+            ctx.TriggerTackleHitPause();
 
             enemy.DefeatByTackle(contactPoint, ctx.tackleVfxPrefab);
         }
